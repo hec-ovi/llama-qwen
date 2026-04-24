@@ -225,6 +225,25 @@ practice. That is the only material reason to prefer this path —
 quality-wise the Q8 output is essentially indistinguishable from BF16
 for everyday use.
 
+### Functional verification
+
+Spot-checked the endpoints on the current build to confirm behavior:
+
+| Endpoint / feature | Result |
+|---|---|
+| `/v1/chat/completions` with thinking ON (300-tok cap) | decode **7.5 t/s**, prefill 53 t/s on 23-tok prompt |
+| `/v1/completions` ("The capital of Argentina is") | decode **7.9 t/s**, returns `" Buenos Aires, which is…"` |
+| `/v1/chat/completions` single tool call (`get_weather`, Tokyo) | `finish_reason=tool_calls`, clean `{"city":"Tokyo"}`, empty content |
+| `/v1/chat/completions` parallel tool calls (Tokyo + Rosario) | 2 structured calls, zero content leakage |
+| `/v1/chat/completions` tool call with optional arg | clean `{"city":"Rosario, Argentina","unit":"celsius"}` |
+| `/v1/chat/completions` with `image_url` | HTTP 500: `image input is not supported - hint: if this is unexpected, you may need to provide the mmproj` — confirms the GGUF has no vision tower |
+
+Tool-call parsing on this path is **not** affected by the vLLM
+reasoning/tool-parser bugs ([vllm#40783](https://github.com/vllm-project/vllm/pull/40783),
+[#40785](https://github.com/vllm-project/vllm/pull/40785),
+[#40787](https://github.com/vllm-project/vllm/pull/40787)) — llama.cpp
+has its own independent extractor.
+
 ---
 
 ## Reproduce
