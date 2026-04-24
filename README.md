@@ -37,9 +37,17 @@ for gfx1151, with rocWMMA flash-attention kernels enabled. No patches,
 no forks — upstream llama.cpp works as-is for this architecture, which
 is a key difference from the vLLM path.
 
-This is the **sibling** of [`vllm-qwen`](https://github.com/hec-ovi/vllm-qwen).
-Same hardware, same model family, different runtime. See the
-[comparison](#which-should-i-run) below.
+> **Want the official BF16 weights, vision input, or separated reasoning on `/v1/responses`?**
+> See the sibling repo [**`vllm-qwen`**](https://github.com/hec-ovi/vllm-qwen) —
+> same hardware, Qwen 3.6-27B BF16 via vLLM. Official Qwen safetensors,
+> image understanding, Responses API with `reasoning` items. Trade-off:
+> decode is ~43% the speed of this repo (4.3 vs 7.5 t/s) and tool
+> calling currently has three open upstream parser bugs. Pick that one
+> for vision / structured reasoning, this one for raw chat + agentic
+> speed.
+
+See the full [side-by-side comparison](#which-should-i-run-llama-qwen-or-vllm-qwen)
+below.
 
 ---
 
