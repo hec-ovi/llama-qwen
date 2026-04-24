@@ -268,7 +268,7 @@ Python 3.
 | Prefill speed (8K) | 200 t/s | ~38 t/s |
 | Vision input | ✘ | ✓ |
 | `/v1/responses` + separated reasoning | ✘ | ✓ |
-| Tool calling (OpenAI format) | ✓ (via `--jinja`) | ✓ |
+| Tool calling (OpenAI format) | ✓ (via `--jinja`, verified clean) | ⚠ broken on current vLLM commit (see [vllm#40783](https://github.com/vllm-project/vllm/pull/40783) / [#40785](https://github.com/vllm-project/vllm/pull/40785) / [#40787](https://github.com/vllm-project/vllm/pull/40787)) |
 | Context | 256K | 256K |
 | Memory footprint | ~35 GiB total | ~105 GiB total |
 | Boot time cold | **~13s** | ~4 min |
