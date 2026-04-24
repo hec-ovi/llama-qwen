@@ -271,11 +271,11 @@ Python 3.
 
 | | `llama-qwen` (this repo) | [`vllm-qwen`](https://github.com/hec-ovi/vllm-qwen) |
 |---|---|---|
-| Weights format | Q8_0 GGUF | BF16 safetensors (official) |
+| Weights format | Q8_0 GGUF (Unsloth re-quant) | BF16 safetensors (official) |
 | Decode speed | **~7.5 t/s** | 4.3 t/s |
 | Prefill speed (8K) | 200 t/s | ~38 t/s |
-| Vision input | ✘ | ✓ |
-| `/v1/responses` + separated reasoning | ✘ | ✓ |
+| Vision input | ✘ (GGUF has no `mmproj`) | ✓ |
+| `/v1/responses` + separated reasoning | ✘ (not implemented in llama.cpp) | ✓ |
 | Tool calling (OpenAI format) | ✓ (via `--jinja`, verified clean) | ⚠ broken on current vLLM commit (see [vllm#40783](https://github.com/vllm-project/vllm/pull/40783) / [#40785](https://github.com/vllm-project/vllm/pull/40785) / [#40787](https://github.com/vllm-project/vllm/pull/40787)) |
 | Context | 256K | 256K |
 | Memory footprint | ~35 GiB total | ~105 GiB total |
