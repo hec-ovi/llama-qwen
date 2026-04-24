@@ -1,0 +1,63 @@
+services:
+  llama-server:
+    image: llama-qwen:server
+    build: .
+    container_name: llama-qwen
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    ports:
+      - "127.0.0.1:${LLAMA_HOST_PORT:-8080}:8080"
+    volumes:
+      # Host-mounted model cache. Must contain the HuggingFace hub/ subdir
+      # with the GGUF snapshot fetched via `hf download` or similar.
+      - ${LLAMA_HOST_MODELS_DIR}:/models:ro
+    ipc: host
+    shm_size: "8gb"
+    environment:
+      # Strix Halo (gfx1151) doesn't appear in HSA's supported list by
+      # default; override to the closest RDNA 3.5 arch so ROCm will
+      # actually bind to the iGPU.
+      HSA_OVERRIDE_GFX_VERSION: "11.5.1"
+      # Unified memory path — no copies between "VRAM" and RAM, just one
+      # GTT-backed pool. Required on APUs.
+      GGML_HIP_UMA: "1"
+      HIP_VISIBLE_DEVICES: "0"
+    command:
+      - llama-server
+      - -m
+      - ${LLAMA_MODEL_FILE:-/models/hub/models--unsloth--Qwen3.6-27B-GGUF/snapshots/82d411acf4a06cfb8d9b073a5211bf410bfc29bf/Qwen3.6-27B-Q8_0.gguf}
+      # Offload every layer to the iGPU. With UMA there is no cost to
+      # putting the whole model "on device" — it's the same physical RAM.
+      - -ngl
+      - "99"
+      # Native max context for Qwen 3.6 27B.
+      - -c
+      - "${LLAMA_CONTEXT:-262144}"
+      # Quantize KV cache to q8_0 to fit 256K context inside the UMA
+      # pool. Accuracy loss is negligible for this model at 8-bit KV.
+      - --cache-type-k
+      - "q8_0"
+      - --cache-type-v
+      - "q8_0"
+      # Flash attention via rocWMMA — a meaningful speedup on RDNA 3.5.
+      # llama.cpp now requires on|off|auto (bare -fa is deprecated).
+      - -fa
+      - "on"
+      # Use the model's own chat template for /v1/chat/completions.
+      - --jinja
+      # Fully load weights into RAM. On UMA this avoids page fault
+      # stalls during decode that mmap otherwise triggers.
+      - --no-mmap
+      # Physical-core count for decode threads. Strix Halo has 16 p-cores.
+      - -t
+      - "${LLAMA_THREADS:-16}"
+      # Prefill is CPU-parallel; use all SMT threads.
+      - -tb
+      - "${LLAMA_THREADS_BATCH:-32}"
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8080"

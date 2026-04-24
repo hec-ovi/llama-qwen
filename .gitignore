@@ -1,0 +1,18 @@
+# Local secrets and config
+.env
+
+# Hidden experiment/history folder — kept locally, not published
+.tests/
+
+# Benchmark artifacts
+test/*.json
+
+# Python / editor noise
+__pycache__/
+*.pyc
+*.log
+
+# Model weights must never land here
+*.gguf
+*.safetensors
+models/
