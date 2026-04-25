@@ -33,8 +33,8 @@ ENV ROCM_PATH=/opt/rocm \
     PATH=/opt/rocm/bin:/opt/rocm/llvm/bin:$PATH \
     LD_LIBRARY_PATH=/opt/rocm/lib:/opt/rocm/lib64:/opt/rocm/llvm/lib
 
-# 4. llama.cpp from upstream HEAD (pin with --build-arg LLAMA_COMMIT=<sha> if needed).
-ARG LLAMA_COMMIT=
+# 4. llama.cpp from a pinned commit (override with --build-arg LLAMA_COMMIT=<sha> or LLAMA_COMMIT="" for HEAD).
+ARG LLAMA_COMMIT=15fa3c493
 RUN git clone https://github.com/ggml-org/llama.cpp.git /opt/llama.cpp
 WORKDIR /opt/llama.cpp
 RUN if [ -n "$LLAMA_COMMIT" ]; then \

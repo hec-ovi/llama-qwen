@@ -312,3 +312,9 @@ Qwen team → `vllm-qwen`.
 └── test/
     └── bench.py            reproducible 3-shape benchmark harness
 ```
+
+---
+
+## License
+
+[The Unlicense](LICENSE). Public domain dedication: use, modify, distribute, sell, fork, do whatever you want with this code. No attribution required, no warranty given.
