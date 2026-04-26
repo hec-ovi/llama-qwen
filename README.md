@@ -34,11 +34,11 @@ to keep the cache small enough that the full context still fits.
 
 llama.cpp is **built from source** against a TheRock nightly ROCm SDK
 for gfx1151, with rocWMMA flash-attention kernels enabled. No patches,
-no forks — upstream llama.cpp works as-is for this architecture, which
+no forks, upstream llama.cpp works as-is for this architecture, which
 is a key difference from the vLLM path.
 
 > **Want the official BF16 weights, vision input, or separated reasoning on `/v1/responses`?**
-> See the sibling repo [**`vllm-qwen`**](https://github.com/hec-ovi/vllm-qwen) —
+> See the sibling repo [**`vllm-qwen`**](https://github.com/hec-ovi/vllm-qwen):
 > same hardware, Qwen 3.6-27B BF16 via vLLM. Official Qwen safetensors,
 > image understanding, Responses API with `reasoning` items. Trade-off:
 > decode is ~43% the speed of this repo (4.3 vs 7.5 t/s) and tool
@@ -57,7 +57,7 @@ below.
 |---|---|
 | Host OS | Ubuntu 26.04 (container base) |
 | ROCm | **TheRock `7.13.0a20260424`** (S3 nightly; resolves to latest at build time) |
-| llama.cpp | upstream HEAD (build pinned to `15fa3c493` — 3 commits behind at bench time, all unrelated to HIP/gfx1151) |
+| llama.cpp | upstream HEAD (build pinned to `15fa3c493`, 3 commits behind at bench time, all unrelated to HIP/gfx1151) |
 | Model | `unsloth/Qwen3.6-27B-GGUF`, Q8_0 quant |
 | Build flags | `GGML_HIP=ON` + `GGML_HIP_ROCWMMA_FATTN=ON` + `GPU_TARGETS=gfx1151` |
 
@@ -72,18 +72,18 @@ This is **the only supported configuration today.** Other Strix Halo
 variants (8050S / 8040S / lower RAM) will likely work but haven't been
 tested.
 
-### Host memory setup (required — one-time)
+### Host memory setup (required, one-time)
 
 Strix Halo is UMA: system RAM and GPU VRAM share the same physical pool.
 Out of the box the BIOS reserves a fixed chunk as "dedicated VRAM" and
 the Linux TTM subsystem caps how much of the rest the GPU driver may
-map as GTT. Both defaults are wrong for this workload — the 27 GiB
+map as GTT. Both defaults are wrong for this workload: the 27 GiB
 Q8_0 model plus a 256K KV cache won't fit unless you widen them.
 
 **1. BIOS / UEFI:** set the dedicated GPU VRAM carve-out to its
 **minimum (2 GB / 2048 MB)**. You want the GPU to take memory from the
 shared pool on demand via GTT, not from a fixed-size pre-allocation.
-Menu name varies by vendor — look for *UMA Frame Buffer Size*,
+Menu name varies by vendor; look for *UMA Frame Buffer Size*,
 *UMA Buffer Size*, *iGPU Memory*, or *GPU Shared Memory*.
 
 **2. Ubuntu GRUB:** raise the TTM page limit so the kernel will
@@ -110,7 +110,7 @@ cat /sys/class/drm/card1/device/mem_info_gtt_total
 
 `ttm.pages_limit=30408704` is 30,408,704 × 4 KiB pages = **116 GiB**.
 Leave 12 GiB for the OS and desktop. `amdgpu.noretry=0` +
-`amdgpu.gpu_recovery=1` are stability flags — keep them on for
+`amdgpu.gpu_recovery=1` are stability flags; keep them on for
 long-running inference.
 
 ---
@@ -136,7 +136,7 @@ hf download unsloth/Qwen3.6-27B-GGUF \
 docker compose up -d --build
 
 # First build: ~10 min (ROCm tarball + llama.cpp HIP source build, -j 4)
-# First start: <15s (no JIT — llama.cpp compiles all kernels ahead of time)
+# First start: <15s (no JIT, llama.cpp compiles all kernels ahead of time)
 # Subsequent starts: <10s
 
 # Verify
@@ -159,7 +159,7 @@ step), then the runtime just `mmap`s the `.so`. Cold-start timing:
 | Server bind | ~1s | HTTP server listens on `:8080` |
 | **Total** | **~13s** | |
 
-No "silent window" to misread as stuck — llama-server logs its load
+No "silent window" to misread as stuck. llama-server logs its load
 progress continuously. You can issue the first request the moment
 `/health` returns 200.
 
@@ -170,14 +170,14 @@ progress continuously. You can issue the first request the moment
 | Endpoint | Purpose |
 |---|---|
 | `POST /v1/chat/completions` | OpenAI chat with `messages`. Supports streaming (`stream: true`). |
-| `POST /v1/completions` | OpenAI text completion — raw `prompt` string. |
+| `POST /v1/completions` | OpenAI text completion, raw `prompt` string. |
 | `GET  /v1/models` | Lists the loaded GGUF. |
 | `GET  /health` | Liveness probe. |
 | `GET  /props` | llama.cpp-specific: loaded model metadata, context size, chat template. |
 
 The model's native **thinking mode** (`<think>...</think>`) is on by
 default. Add `/no_think` anywhere in the user message to suppress it
-for a single turn (Qwen convention) — the benchmark's needle tests
+for a single turn (Qwen convention), the benchmark's needle tests
 use this so the answer lands in visible output instead of inside
 `<think>`.
 
@@ -201,13 +201,13 @@ Server-reported `timings.prompt_per_second` and
 | Short decode ("Hi.") | 12 | 202 | 27.1 | 42.4 | **7.55** |
 | Medium needle (~8K prompt) | 8,039 | 198 | 66.9 | 200.0 | **7.43** |
 
-Decode is **rock-steady at 7.4–7.6 t/s** across configs. That's the
-real Q8_0 ceiling for a 27B model on gfx1151 — bound by weight-streaming
+Decode is **rock-steady at 7.4-7.6 t/s** across configs. That's the
+real Q8_0 ceiling for a 27B model on gfx1151, bound by weight-streaming
 bandwidth through the UMA, not by compute.
 
 ### Decode throughput across tuning attempts
 
-I swept a handful of obvious knobs. None of them moved the needle —
+I swept a handful of obvious knobs. None of them moved the needle:
 decode is pure memory bandwidth on this GPU:
 
 | Config | Short decode (t/s) | Medium prefill (t/s) |
@@ -217,7 +217,7 @@ decode is pure memory bandwidth on this GPU:
 | `-b 4096 -ub 1024` (bigger prefill batches) | 7.48 | 188.83 |
 | `GGML_HIP_UMA=1` (unified memory mode) | 7.55 | 199.17 |
 
-Bigger prefill batches actually *hurt* prefill (197 → 188 t/s) — the
+Bigger prefill batches actually *hurt* prefill (197 → 188 t/s), the
 kernel already saturates at its default sizes, and the extra
 synchronization cost dominates.
 
@@ -229,7 +229,7 @@ synchronization cost dominates.
 | **llama.cpp** | **Q8_0** | **~27 GiB** | **7.50** |
 
 Q8 is ~60% the weight bandwidth of BF16, so decode is ~75% faster in
-practice. That is the only material reason to prefer this path —
+practice. That is the only material reason to prefer this path:
 quality-wise the Q8 output is essentially indistinguishable from BF16
 for everyday use.
 
@@ -244,12 +244,12 @@ Spot-checked the endpoints on the current build to confirm behavior:
 | `/v1/chat/completions` single tool call (`get_weather`, Tokyo) | `finish_reason=tool_calls`, clean `{"city":"Tokyo"}`, empty content |
 | `/v1/chat/completions` parallel tool calls (Tokyo + Rosario) | 2 structured calls, zero content leakage |
 | `/v1/chat/completions` tool call with optional arg | clean `{"city":"Rosario, Argentina","unit":"celsius"}` |
-| `/v1/chat/completions` with `image_url` | HTTP 500: `image input is not supported - hint: if this is unexpected, you may need to provide the mmproj` — confirms the GGUF has no vision tower |
+| `/v1/chat/completions` with `image_url` | HTTP 500: `image input is not supported - hint: if this is unexpected, you may need to provide the mmproj`, confirms the GGUF has no vision tower |
 
 Tool-call parsing on this path is **not** affected by the vLLM
 reasoning/tool-parser bugs ([vllm#40783](https://github.com/vllm-project/vllm/pull/40783),
 [#40785](https://github.com/vllm-project/vllm/pull/40785),
-[#40787](https://github.com/vllm-project/vllm/pull/40787)) — llama.cpp
+[#40787](https://github.com/vllm-project/vllm/pull/40787)), llama.cpp
 has its own independent extractor.
 
 ---
@@ -296,7 +296,7 @@ Qwen team → `vllm-qwen`.
 |---|---|---|
 | Vision / `image_url` | ✘ unsupported | Unsloth's GGUF conversion doesn't include the Qwen 3.6 vision tower. Fixable upstream in the GGUF export path, not here. |
 | `/v1/responses` with separated reasoning | ✘ unsupported | llama.cpp doesn't implement the OpenAI Responses API. |
-| FP8 KV cache | n/a | RDNA 3.5 has no hardware FP8 path — Q8_0 is already the correct quant for this GPU. |
+| FP8 KV cache | n/a | RDNA 3.5 has no hardware FP8 path, Q8_0 is already the correct quant for this GPU. |
 
 ---
 
